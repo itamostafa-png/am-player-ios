@@ -1,0 +1,65 @@
+name: Build iOS app (IPA)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Unpack app files
+        run: unzip -o app-files.zip
+
+      - name: Install Capacitor
+        run: npm install
+
+      - name: Create iOS project
+        run: npx cap add ios
+
+      - name: Allow HTTP streams, name, icon, splash
+        run: |
+          P=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity" "$P" || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$P"
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$P"
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true" "$P"
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsForMedia bool true" "$P"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName AM Player" "$P" || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string AM Player" "$P"
+          # landscape only (iPhone + iPad)
+          for K in UISupportedInterfaceOrientations "UISupportedInterfaceOrientations~ipad"; do
+            /usr/libexec/PlistBuddy -c "Delete :$K" "$P" || true
+            /usr/libexec/PlistBuddy -c "Add :$K array" "$P"
+            /usr/libexec/PlistBuddy -c "Add :$K:0 string UIInterfaceOrientationLandscapeLeft" "$P"
+            /usr/libexec/PlistBuddy -c "Add :$K:1 string UIInterfaceOrientationLandscapeRight" "$P"
+          done
+          /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "$P" || true
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" "$P"
+          for f in ios/App/App/Assets.xcassets/AppIcon.appiconset/*.png; do cp resources/icon-1024.png "$f"; done
+          for f in ios/App/App/Assets.xcassets/Splash.imageset/*.png; do cp resources/splash-2732.png "$f"; done || true
+
+      - name: Copy web app
+        run: npx cap sync ios
+
+      - name: Build unsigned IPA
+        run: |
+          cd ios/App
+          if [ -d App.xcworkspace ]; then TARGET="-workspace App.xcworkspace"; else TARGET="-project App.xcodeproj"; fi
+          xcodebuild $TARGET -scheme App -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry ../../AM-Player.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AM-Player-iOS
+          path: AM-Player.ipa
