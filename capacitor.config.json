@@ -1,0 +1,13 @@
+{
+  "appId": "com.am.player",
+  "appName": "AM Player",
+  "webDir": "www",
+  "backgroundColor": "#000000",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#000000"
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
+}
