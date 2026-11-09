@@ -29,8 +29,6 @@ jobs:
           /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity" "$P" || true
           /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$P"
           /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$P"
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true" "$P"
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsForMedia bool true" "$P"
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName AM Player" "$P" || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string AM Player" "$P"
           # landscape only (iPhone + iPad)
           for K in UISupportedInterfaceOrientations "UISupportedInterfaceOrientations~ipad"; do
