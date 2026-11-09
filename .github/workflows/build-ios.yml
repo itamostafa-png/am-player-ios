@@ -23,6 +23,17 @@ jobs:
       - name: Create iOS project
         run: npx cap add ios
 
+      - name: Add VLC player engine (plays MKV and every format inside the app)
+        run: |
+          cp resources/ios/VlcPlayerPlugin.swift resources/ios/MainViewController.swift ios/App/App/
+          cp resources/ios/add_files.js ./add_files.js
+          npm install --no-save xcode@3
+          node add_files.js
+          sed -i '' 's/customClass="CAPBridgeViewController" customModule="Capacitor"/customClass="MainViewController" customModule="App" customModuleProvider="target"/' ios/App/App/Base.lproj/Main.storyboard
+          sed -i '' "s/  # Add your Pods here/  pod 'MobileVLCKit', '~> 3.6.0'/" ios/App/Podfile
+          grep -n "MobileVLCKit" ios/App/Podfile
+          grep -n "MainViewController" ios/App/App/Base.lproj/Main.storyboard
+
       - name: Allow HTTP streams, name, icon, splash
         run: |
           P=ios/App/App/Info.plist
@@ -45,6 +56,9 @@ jobs:
 
       - name: Copy web app
         run: npx cap sync ios
+
+      - name: Install native libraries (VLC)
+        run: cd ios/App && pod install --repo-update
 
       - name: Build unsigned IPA
         run: |
